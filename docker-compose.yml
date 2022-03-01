@@ -1,0 +1,91 @@
+#
+#  Squelette Docker-compose.yml pour le projet Le Bon Sandwich
+#  documentation et utilisation de l'image canals/php sur
+#  https://gitlab.univ-lorraine.fr/canals5/docker-php
+#
+
+
+
+version: '3'
+networks:
+  lbs.net:
+    driver: bridge
+services:
+#####################################################
+# API SERVICES
+#####################################################
+
+#######################################
+###  Service  commande : prise de commandes et suivi des commandes
+###  api api.commande
+###  database gérée par le service mysql.commande (sql)
+###  requêtes HTTP vers api.catalogue et api.fidelisation
+#######################################
+
+  # service api.commande : api frontoffice pour la prise des commandes
+  #
+  api.commande:
+    image: 'canals/php:latest'
+    environment:
+      - VHOST_HOSTNAME=api.commande.local
+      - VHOST_DOCROOT=/var/www/public
+    ports:
+      - '19080:80'
+      - '19043:443'
+    volumes:
+      - './lbs_commande_service/public:/var/www/public'
+      - './lbs_commande_service/src:/var/www/src'
+    working_dir: /var/www/src
+    networks:
+      - lbs.net
+    depends_on:
+      - mysql.commande
+
+  # service api.suivi.fabrication : api backoffice pour le suivi de fabrication
+  #  commandes
+  #
+  api.suivi.fabrication:
+    image: 'canals/php:latest'
+    environment:
+      - VHOST_HOSTNAME=api.fabrication.local
+      - VHOST_DOCROOT=/var/www/pub
+    ports:
+      - '19680:80'
+      - '19643:443'
+    volumes:
+      - './lbs_fabrication_service/pub:/var/www/pub'
+      - './lbs_fabrication_service/src:/var/www/src'
+      - './lbs_fabrication_service/log:/var/log/app'
+    working_dir: /var/www/src
+    networks:
+      - lbs.net
+    depends_on:
+      - mysql.commande
+
+  # service sql pour le stockage des commandes -
+  # utilisé par l'api  commande et l'api suivi de fabrication
+  mysql.commande:
+    image: 'mariadb:latest'
+    command: '--default-authentication-plugin=mysql_native_password --character-set-server=utf8 --collation-server=utf8_general_ci'
+    environment:
+      - MYSQL_ROOT_PASSWORD=comroot
+      - MYSQL_USER=command_lbs
+      - MYSQL_PASSWORD=command_lbs
+      - MYSQL_DATABASE=command_lbs
+    ports:
+      - '3307:3306'
+    networks:
+      - lbs.net
+    volumes:
+      - './lbs_commande_service/sql:/var/sql'
+
+
+#
+# service administration des bases sql
+#
+  adminer:
+    image: adminer
+    ports:
+      - '8080:8080'
+    networks:
+      - lbs.net
