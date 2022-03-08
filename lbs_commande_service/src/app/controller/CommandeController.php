@@ -6,9 +6,10 @@ use \Psr\Http\Message\ServerRequestInterface as Request ;
 use \Psr\Http\Message\ResponseInterface as Response ;
 //docker-compose start démarrer le serv url http://api.commande.local:19080/
 use  lbs\command\app\models\Command as Command;
-
-use Illuminate\Support\Str;
-
+use  lbs\command\app\models\Items as Items;
+use  Illuminate\Support\Str;
+use \Datetime;
+use Respect\Validation\Validator as v;
 class CommandeController {
     
     // public $commandes=[
@@ -51,61 +52,153 @@ class CommandeController {
         return  $rs;
     }
     function getCommande (Request $rq, Response $rs, array $args):Response{
-        
-        $commandes = Command::select(['id','mail', 'nom','montant', 'livraison','created_at'])->where('id','=', $args['id'])->FirstOrFail();
-        $rs = $rs->withHeader( 'Content-Type', 'application/json;charset=utf-8' ) ;
-        if (isset($_GET['embed'])){
-            $items=$_GET['embed'];
-        }else{
-            $items="";
-        }
-        
-        if ($items =='items'){
-            $items_info = $commandes->getItem()->get(['id','libelle','tarif','quantite']);
-            $data =[
-                'type'=>'ressource',
-                'commande'=>$commandes->toArray(),
-                'items'=>$items_info->toArray(),
-                'links'=>[
-                    'items'=>[
-                        'href'=>'/commande/'.$commandes['id']."/items"
-                    ],
-                    'self'=>[
-                        'href'=>'/commande/'.$commandes['id']
-                    ]
-                ],
-            ];
-        }else{
-            $data =[
-                'type'=>'ressource',
-                'commande'=>$commandes->toArray(),
-                'links'=>[
-                    'items'=>[
-                        'href'=>'/commande/'.$commandes['id']."/items"
-                    ],
-                    'self'=>[
-                        'href'=>'/commande/'.$commandes['id']
-                    ]
-                ],
-            ];
-        }
-       
-        $rs->getBody()->write(json_encode($data));
-        return  $rs;
-    }
-    function addCommande (){
-        $uuid = Str::uuid()->toString();
-       
-        $new_commande = new Command();
-        $new_commande->id=$uuid;
-        $new_commande->livraison='2022-01-31 20:00:00';
-        $new_commande->nom='Thibault.Amagat';
-        $new_commande->mail='monmail@monservice.com';
-        $new_commande->montant=10.00;
-        $new_commande->token="b2067acd19f205577d707604751449f251556a80fefdc186e1e88e08eb477959";
-        $new_commande->status=5;
 
-        $new_commande->save();
+        $embedItems=false;
+        $id=$args['id'];
+        $embed = $rq->getQueryParam('embed',null);
+        
+        if($embed === 'items') $embedItems=true;
+        try{
+            
+            $query = Command::select(['id', 'livraison', 'nom', 'mail', 'status', 'montant'])->where('id','=',$id);
+          
+            if($embedItems){$query=$query->with('items');};
+            
+            $commande=$query->firstOrFail();
+            
+            $links = [
+                'items'=>[
+                    'href'=>'/commande/'.$commande['id']."/items"
+                ],
+                'self'=>[
+                    'href'=>'/commande/'.$commande['id']
+                ]
+            ];
+
+            $data = [
+                'type'=> 'resource',
+                'commande' => $commande->toArray(),
+                'links' => $links
+            ];
+           
+            $rs = $rs->withStatus(200)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write(json_encode($data));
+            return $rs;
+
+        }catch(ModelNotFoundException $e){
+            return $rs->getBody()->write("error requete :".$e->getMessage());
+        }
+    }
+    function addCommande (Request $rq, Response $rs, array $command_data):Response{
+        $command_data=$rq->getParsedBody();
+        
+        if (!isset($command_data['nom_client'])){
+           
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("missing data: nom_client");
+            return $rs;
+        }
+        if (!isset($command_data['mail_client'])|| !filter_var($command_data['mail_client'],FILTER_SANITIZE_EMAIL)){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error or missing data: mail_client");
+            return $rs;
+        }
+        if (!isset($command_data['livraison']['date'])){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error or missing data: livraison[date]");
+            return $rs;
+        }
+            
+        if (!isset($command_data['livraison']['heure'])){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error or missing data: livraison[heure]");
+            return $rs;
+        }
+        //VALIDATOR
+        if(v::alnum()->validate($command_data['nom_client'])!=true){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error incorrect value for:nom_client");
+            return $rs;    
+        }
+        if(v::date('Y-m-d')->validate($command_data['livraison']['date'])!=true||$command_data['livraison']['date']<date("Y-m-d")){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error incorrect value for:date");
+            return $rs;   
+        }
+        if(v::email()->validate($command_data['mail_client'])!=true){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error incorrect value for:mail_client");
+            return $rs;    
+        }
+     
+        if(!isset($command_data['items'])){
+            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write("error array items doesn't exist");
+            return $rs;    
+        };
+        
+    
+
+        try{
+            $rs = $rs->withStatus(201)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $date=new DateTime($command_data['livraison']['date'].' '.$command_data['livraison']['heure']);
+            
+            $c= new Command();
+            $id=Str::uuid()->toString();
+            $c->id = $id;
+            $c->nom = filter_var($command_data['nom_client'],FILTER_SANITIZE_STRING);
+            $c->mail = filter_var($command_data['mail_client'],FILTER_SANITIZE_EMAIL);
+            $c->livraison = date_format($date,'Y-m-d H:i');
+            $c->status = 5;
+            $c->token=bin2hex(random_bytes(32));
+            $c->montant=0;
+            foreach($command_data['items'] as $item){
+                Items::create([
+                    'uri' => $item['uri'],
+                    'quantite'=>$item['q'],
+                    'libelle'=>$item['libelle'],
+                    'command_id'=>$c->id,
+                    'tarif'=>$item['tarif'],
+                ]);
+
+
+               
+                $c->montant+=$item['q']*$item['tarif'];
+            
+            }
+            
+            $c->save();
+
+
+            $rs->getBody()->write(json_encode($c));//erreur DEMANDER AU PROF
+            return $rs;
+        }catch(\Exception $e){
+            $rs = $rs->withStatus(500)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
+            $rs->getBody()->write($e->getMessage());
+            return $rs;
+        }
+        // $uuid = Str::uuid()->toString();
+        // $token = random_bytes(32);
+        // $token = bin2hex($token);
+
+        // $rs = $rs->withStatus(201)->withHeader( 'Content-Type', 'application/json;charset=utf-8')->withHeader('Location','commande/'.$uuid );
+
+        // $new_commande = new Command();
+        // $new_commande->id=$uuid;
+        // $new_commande->nom='theo.Antolini';
+        // $new_commande->mail='oaihzifoaznf@monservice.com';   
+        // $new_commande->livraison='2020-12-30 01:00:00';
+        // $new_commande->token=$token;
+        // $new_commande->montant=0;
+        // $new_commande->status=5;
+    
+        // $new_commande->save();
+        // //getCommande($new_commande->id);
+       
+        // $rs->getBody()->write(json_encode($new_commande));
+        
+        // return  $rs;
+       
         // $data =[
         //     'type'=>'collection',
         //     'count'=>count($items),
@@ -138,21 +231,7 @@ class CommandeController {
         
        
     }*/
-/*try{
 
-}catch{
-
-}
-    $commandes = Command::select(['id','mail', 'montant'])->get() // ->where(id,'=', $id)->FirstOrFail
-
-    $data =[
-        'type'=>'ressource',
-        'commande'=>$commandes->toArray();
-    ]
-
-    
-    $rs= $rs->withStatus(200)
-*/
 }
 
 

@@ -9,7 +9,8 @@ require_once  __DIR__ . '/../src/vendor/autoload.php';
 use \Psr\Http\Message\ServerRequestInterface as Request ;
 use \Psr\Http\Message\ResponseInterface as Response ;
 use \src\app\controller\CommandeController as CommandeController;
-
+use  lbs\command\app\models\Command as Command;
+use lbs\command\app\middlewares\Token as Token;
 
 $settings= require_once __DIR__.'/../src/app/conf/settings.php';
 $errors = require_once __DIR__ . '/../src/app/errors/errors.php';
@@ -34,7 +35,7 @@ $c[ 'notFoundHandler' ]= function( $c ) {
         $resp= $resp->withStatus( 400 )->withHeader('Content-type','application/json') ;
         $resp->getBody()->write(json_encode(['type'=>'error',
         'error'=>400,
-        'message'=>"$req:malformed uri"
+        'message'=>":malformed uri"
         ]) ) ;
         return $resp ;
     } ;
@@ -72,22 +73,52 @@ $c[ 'phpErrorHandler' ]= function( $c ) {
         return $resp ;
     };
 };
+function checkToken ( Request $rq, Response $rs, callable $next ) {
+            
+         
+    // récupérer l'identifiant de cmmde dans la route et le token
+        $id = $rq->getAttribute('route')->getArgument( 'id');
+        $token = $rq->getQueryParam('token', null);
+
+        
+        // vérifier que le token correspond à la commande
+        try {
+            Command::where('id', '=', $id)
+            ->where('token', '=',$token)
+            ->firstOrFail();
+        } catch (ModelNotFoundException $e) {
+            // générer une erreur
+            $rs->getBody()->write('erreur');
+            return $rs ;
+        };
+        return $next($rq, $rs);
+}
 $app = new \Slim\App($c);
 
 $app->get('/commandes',
     \lbs\command\app\controller\CommandeController::class.":listCommands"
 );
-$app->get('/commande/{id}',
+$app->get('/commande/{id}[/]',
     \lbs\command\app\controller\CommandeController::class.":getCommande"
-);
+    )->add('checkToken');
+
 $app->get('/commande/{id}/items',
     \lbs\command\app\controller\ItemController::class.":getItems"
 );
 $app->post('/commande',
     \lbs\command\app\controller\CommandeController::class.":addCommande"
 );
-$app->put('/commande/{id}[/]',
-    \lbs\command\app\controller\CommandeController::class.":replaceCommande"
-);
+// $app->put('/commande/{id}[/]',
+//     \lbs\command\app\controller\CommandeController::class.":replaceCommande"
+// );
+// $app->get('/commande/{id}/items[/]',
+//      \lbs\command\app\controller\CommandeController::class.":getItems")
+//      ->add(\lbs\command\app\middlewares\Token::class .':checkToken')
+//      ->setName('commandeItems');
+
+// $app->get('/commande/{id}',
+// \lbs\command\app\controller\CommandeController::class.":getCommand")
+// ->add(\lbs\command\app\middlewares\Token::class .':checkToken')
+// ->setName('commande');
 
 $app->run();

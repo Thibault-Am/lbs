@@ -8,4 +8,5 @@ class Items extends \Illuminate\Database\Eloquent\Model {
     //protected $hidden = ['created_at','updated_at'];
     public    $incrementing = true;
     public    $keyType="integer";
+    public $timestamps = false;
 }
