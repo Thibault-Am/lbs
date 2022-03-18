@@ -39,7 +39,7 @@ services:
     networks:
       - lbs.net
     depends_on:
-      - mysql.commande
+      - mysql.user
 
   # service api.suivi.fabrication : api backoffice pour le suivi de fabrication
   #  commandes
@@ -62,6 +62,25 @@ services:
     depends_on:
       - mysql.commande
 
+  # service api.auth : api frontoffice pour l'authentification
+  #
+  api.auth:
+    image: 'canals/php:latest'
+    environment:
+      - VHOST_HOSTNAME=api.auth.local
+      - VHOST_DOCROOT=/var/www/public
+    ports:
+      - '19180:80'
+      - '19143:443'
+    volumes:
+      - './lbs_auth_service/public:/var/www/public'
+      - './lbs_auth_service/src:/var/www/src'
+    working_dir: /var/www/src
+    networks:
+      - lbs.net
+    depends_on:
+      - mysql.user
+      
   # service sql pour le stockage des commandes -
   # utilisé par l'api  commande et l'api suivi de fabrication
   mysql.commande:
@@ -78,6 +97,21 @@ services:
       - lbs.net
     volumes:
       - './lbs_commande_service/sql:/var/sql'
+
+  mysql.user:
+    image: 'mariadb:latest'
+    command: '--default-authentication-plugin=mysql_native_password --character-set-server=utf8 --collation-server=utf8_general_ci'
+    environment:
+      - MYSQL_ROOT_PASSWORD=comroot
+      - MYSQL_USER=user_lbs
+      - MYSQL_PASSWORD=user_lbs
+      - MYSQL_DATABASE=user_lbs
+    ports:
+      - '3308:3306'
+    networks:
+      - lbs.net
+    volumes:
+      - './lbs_auth_service/sql:/var/sql'
 
 
 #

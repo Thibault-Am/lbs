@@ -7,6 +7,7 @@ use \Psr\Http\Message\ResponseInterface as Response ;
 //docker-compose start démarrer le serv url http://api.commande.local:19080/
 use  lbs\command\app\models\Command as Command;
 use  lbs\command\app\models\Items as Items;
+use  lbs\command\app\utils\Writer as Writer;
 use  Illuminate\Support\Str;
 use \Datetime;
 use Respect\Validation\Validator as v;
@@ -93,26 +94,17 @@ class CommandeController {
         $command_data=$rq->getParsedBody();
         
         if (!isset($command_data['nom_client'])){
-           
-            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
-            $rs->getBody()->write("missing data: nom_client");
-            return $rs;
+            return Writer::json_error($rs, 400, "missing data : nom_client");
         }
         if (!isset($command_data['mail_client'])|| !filter_var($command_data['mail_client'],FILTER_SANITIZE_EMAIL)){
-            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
-            $rs->getBody()->write("error or missing data: mail_client");
-            return $rs;
+            return Writer::json_error($rs, 400, "missing data : mail_client");
         }
         if (!isset($command_data['livraison']['date'])){
-            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
-            $rs->getBody()->write("error or missing data: livraison[date]");
-            return $rs;
+            return Writer::json_error($rs, 400, "missing data : livraison date");
         }
             
         if (!isset($command_data['livraison']['heure'])){
-            $rs = $rs->withStatus(400)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
-            $rs->getBody()->write("error or missing data: livraison[heure]");
-            return $rs;
+            return Writer::json_error($rs, 400, "missing data : livraison heure");
         }
         //VALIDATOR
         if(v::alnum()->validate($command_data['nom_client'])!=true){
