@@ -99,17 +99,6 @@ $app->get('/auth',
 $app->get('/check',
     \lbs\auth\app\controller\LBSAuthController::class.":checkValiditeToken"
 );
-// $app->put('/commande/{id}[/]',
-//     \lbs\command\app\controller\CommandeController::class.":replaceCommande"
-// );
-// $app->get('/commande/{id}/items[/]',
-//      \lbs\command\app\controller\CommandeController::class.":getItems")
-//      ->add(\lbs\command\app\middlewares\Token::class .':checkToken')
-//      ->setName('commandeItems');
 
-// $app->get('/commande/{id}',
-// \lbs\command\app\controller\CommandeController::class.":getCommand")
-// ->add(\lbs\command\app\middlewares\Token::class .':checkToken')
-// ->setName('commande');
 
 $app->run();

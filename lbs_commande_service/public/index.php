@@ -51,12 +51,12 @@ $c['notAllowedHandler'] = function ($c) {
     };
 };
 $c[ 'errorHandler' ]= function( $c ) {
-    return function( $req, $resp , $methods ) {
-    $resp= $resp
-    ->withStatus( 404 )->withHeader('Content-type','application/json')
-    ->write(json_encode(["type"=>"error",
-        "message"=>'ressource non disponible : ']));
-    return $resp ;
+    return function( $req, $resp , \Exception $e) {
+        $resp= $resp
+        ->withStatus( 500 )->withHeader('Content-type','application/json') ;
+        $resp->getBody()->write(json_encode(["type"=>"error",
+            "message"=>'erreur  : '. $e->getMessage()]));
+        return $resp ;
     };
 };
 $c[ 'phpErrorHandler' ]= function( $c ) {
@@ -88,7 +88,7 @@ function checkToken ( Request $rq, Response $rs, callable $next ) {
             ->firstOrFail();
         } catch (ModelNotFoundException $e) {
             // générer une erreur
-            $rs->getBody()->write('erreur');
+            $rs->getBody()->write('erreur param token inexistant ou invalide');
             return $rs ;
         };
         return $next($rq, $rs);

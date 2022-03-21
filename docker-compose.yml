@@ -58,10 +58,48 @@ services:
       - './lbs_fabrication_service/log:/var/log/app'
     working_dir: /var/www/src
     networks:
-      - lbs.net
+      lbs.net:
+        aliases:
+          - api.fabrication.local
     depends_on:
       - mysql.commande
 
+
+  web.catalogue:
+    image: 'canals/php:latest'
+    environment:
+      - VHOST_HOSTNAME=web.catalogue.local
+      - VHOST_DOCROOT=/var/www/public
+    ports:
+      - '19880:80'
+      - '19843:443'
+    volumes:
+      - './web_catalogue_service/pub:/var/www/pub'
+      - './web_catalogue_service/src:/var/www/src'
+    working_dir: /var/www/src
+    networks:
+      lbs.net:
+        aliases:
+          - web.catalogue.local
+    depends_on:
+      - mysql.user
+  # service api.backoffice : api backoffice
+  #
+  api.backoffice:
+    image: 'canals/php:latest'
+    environment:
+      - VHOST_HOSTNAME=api.backoffice.local
+      - VHOST_DOCROOT=/var/www/pub
+    ports:
+      - '19480:80'
+      - '19443:443'
+    volumes:
+      - './lbs_backoffice_service/pub:/var/www/pub'
+      - './lbs_backoffice_service/src:/var/www/src'
+      - './lbs_backoffice_service/log:/var/log/app'
+    working_dir: /var/www/src
+    networks:
+      - lbs.net
   # service api.auth : api frontoffice pour l'authentification
   #
   api.auth:
@@ -77,10 +115,12 @@ services:
       - './lbs_auth_service/src:/var/www/src'
     working_dir: /var/www/src
     networks:
-      - lbs.net
+      lbs.net:
+        aliases:
+          - api.auth.local
     depends_on:
       - mysql.user
-      
+    
   # service sql pour le stockage des commandes -
   # utilisé par l'api  commande et l'api suivi de fabrication
   mysql.commande:
@@ -123,3 +163,53 @@ services:
       - '8080:8080'
     networks:
       - lbs.net
+
+  
+  ###########################################################
+  #
+  #   Service catalogue, réalisé avec le CMS Headless Directus
+  #   Service SQL géré par postgres
+  #
+  ###########################################################
+
+  catalogue.data:
+    image: postgis/postgis:13-master
+    volumes:
+      - ./lbs_catalogue_service/data/database:/var/lib/postgresql/data
+    networks:
+      - lbs.net
+
+    environment:
+      POSTGRES_USER: 'catalogue'
+      POSTGRES_PASSWORD: 'catalogue'
+      POSTGRES_DB: 'catalogue'
+
+  api.catalogue:
+    image: directus/directus:latest
+    ports:
+      - 19055:8055
+    volumes:
+      - ./lbs_catalogue_service/uploads:/directus/uploads
+      - ./lbs_catalogue_service/extensions:/directus/extensions
+
+    networks:
+      - lbs.net
+    depends_on:
+      - catalogue.data
+    environment:
+      KEY: '255d861b-5ea1-5996-9aa3-922530ec40b1'
+      SECRET: '6116487b-cda1-52c2-b5b5-c8022c45e263'
+      
+      DB_CLIENT: 'pg'
+      DB_HOST: 'catalogue.data'
+      DB_PORT: '5432'
+      DB_DATABASE: 'catalogue'
+      DB_USER: 'catalogue'
+      DB_PASSWORD: 'catalogue'
+
+      CACHE_ENABLED: 'false'
+      ADMIN_EMAIL: 'admin@catalogue.net'
+      ADMIN_PASSWORD: 'catalogue'
+
+
+

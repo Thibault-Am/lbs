@@ -81,7 +81,7 @@ class CollectionController{
         for ($i=0; $i <count($collection) ; $i++) { 
 
             $links = ['self'=>[
-                'href'=>'/commands/'.$collection[$i]->id
+                'href'=>'/commande/'.$collection[$i]->id
             ]];
             $collection->makeVisible('created_at');
        
