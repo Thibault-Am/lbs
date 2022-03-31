@@ -76,7 +76,7 @@ services:
     volumes:
       - './web_catalogue_service/pub:/var/www/pub'
       - './web_catalogue_service/src:/var/www/src'
-    working_dir: /var/www/src
+    working_dir: /var/www/pub
     networks:
       lbs.net:
         aliases:
