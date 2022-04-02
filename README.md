@@ -1,7 +1,9 @@
 # lbs
 
-| Fonction  | Colonne 2 | Colonne 3 |
-|-----------|-----------|-----------|
-| cellule 1 | cellule 2 | cellule 3 |
-|           |           |           |
-|           |           |           |
+|        Fonction       |          Route        |
+|-----------------------|-----------------------|
+|                       | $app->get('/auth',
+                          \lbs\backoffice\app\controller\AllController::class.":autGateway"
+);                  |
+|                       |                       |
+|                       |                       |       
