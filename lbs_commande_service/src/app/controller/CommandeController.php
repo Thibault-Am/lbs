@@ -162,7 +162,7 @@ class CommandeController {
             $c->save();
 
 
-            $rs->getBody()->write(json_encode($c));//erreur DEMANDER AU PROF
+            $rs->getBody()->write(json_encode($c));
             return $rs;
         }catch(\Exception $e){
             $rs = $rs->withStatus(500)->withHeader( 'Content-Type', 'application/json;charset=utf-8');
