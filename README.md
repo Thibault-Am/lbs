@@ -1,4 +1,4 @@
-** LBS
+**LBS
 
 Groupe: 
 - Thibault Amagat
