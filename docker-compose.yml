@@ -4,23 +4,21 @@
 #  https://gitlab.univ-lorraine.fr/canals5/docker-php
 #
 
-
-
 version: '3'
 networks:
   lbs.net:
     driver: bridge
 services:
-#####################################################
-# API SERVICES
-#####################################################
+  #####################################################
+  # API SERVICES
+  #####################################################
 
-#######################################
-###  Service  commande : prise de commandes et suivi des commandes
-###  api api.commande
-###  database gérée par le service mysql.commande (sql)
-###  requêtes HTTP vers api.catalogue et api.fidelisation
-#######################################
+  #######################################
+  ###  Service  commande : prise de commandes et suivi des commandes
+  ###  api api.commande
+  ###  database gérée par le service mysql.commande (sql)
+  ###  requêtes HTTP vers api.catalogue et api.fidelisation
+  #######################################
 
   # service api.commande : api frontoffice pour la prise des commandes
   #
@@ -63,7 +61,6 @@ services:
           - api.fabrication.local
     depends_on:
       - mysql.commande
-
 
   web.catalogue:
     image: 'canals/php:latest'
@@ -120,7 +117,7 @@ services:
           - api.auth.local
     depends_on:
       - mysql.user
-    
+
   # service sql pour le stockage des commandes -
   # utilisé par l'api  commande et l'api suivi de fabrication
   mysql.commande:
@@ -153,10 +150,9 @@ services:
     volumes:
       - './lbs_auth_service/sql:/var/sql'
 
-
-#
-# service administration des bases sql
-#
+  #
+  # service administration des bases sql
+  #
   adminer:
     image: adminer
     ports:
@@ -164,7 +160,6 @@ services:
     networks:
       - lbs.net
 
-  
   ###########################################################
   #
   #   Service catalogue, réalisé avec le CMS Headless Directus
@@ -199,7 +194,7 @@ services:
     environment:
       KEY: '255d861b-5ea1-5996-9aa3-922530ec40b1'
       SECRET: '6116487b-cda1-52c2-b5b5-c8022c45e263'
-      
+
       DB_CLIENT: 'pg'
       DB_HOST: 'catalogue.data'
       DB_PORT: '5432'
@@ -210,6 +205,3 @@ services:
       CACHE_ENABLED: 'false'
       ADMIN_EMAIL: 'admin@catalogue.net'
       ADMIN_PASSWORD: 'catalogue'
-
-
-
